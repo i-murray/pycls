@@ -13,28 +13,21 @@ import torch
 from pycls.core.config import cfg
 from pycls.datasets.cifar10 import Cifar10
 from pycls.datasets.imagenet import ImageNet
+from pycls.datasets.hiroshimalemon import HiroshimaLemon
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data.sampler import RandomSampler
 
 
 # Supported datasets
-_DATASETS = {"cifar10": Cifar10, "imagenet": ImageNet}
-
-# Default data directory (/path/pycls/pycls/datasets/data)
-_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-
-# Relative data paths to default data directory
-_PATHS = {"cifar10": "cifar10", "imagenet": "imagenet"}
+_DATASETS = {"cifar10": Cifar10, "imagenet": ImageNet, "hiroshimalemon": HiroshimaLemon}
 
 
-def _construct_loader(dataset_name, split, batch_size, shuffle, drop_last):
+def _construct_loader(dataset_name, dataset_path, split, batch_size, shuffle, drop_last):
     """Constructs the data loader for the given dataset."""
     err_str = "Dataset '{}' not supported".format(dataset_name)
-    assert dataset_name in _DATASETS and dataset_name in _PATHS, err_str
-    # Retrieve the data path for the dataset
-    data_path = os.path.join(_DATA_DIR, _PATHS[dataset_name])
+    assert dataset_name in _DATASETS, err_str
     # Construct the dataset
-    dataset = _DATASETS[dataset_name](data_path, split)
+    dataset = _DATASETS[dataset_name](dataset_path, split)
     # Create a sampler for multi-process training
     sampler = DistributedSampler(dataset) if cfg.NUM_GPUS > 1 else None
     # Create a loader
@@ -54,6 +47,7 @@ def construct_train_loader():
     """Train loader wrapper."""
     return _construct_loader(
         dataset_name=cfg.TRAIN.DATASET,
+        dataset_path=cfg.TRAIN.DATASET_PATH,
         split=cfg.TRAIN.SPLIT,
         batch_size=int(cfg.TRAIN.BATCH_SIZE / cfg.NUM_GPUS),
         shuffle=True,
@@ -65,6 +59,7 @@ def construct_test_loader():
     """Test loader wrapper."""
     return _construct_loader(
         dataset_name=cfg.TEST.DATASET,
+        dataset_path=cfg.TEST.DATASET_PATH,
         split=cfg.TEST.SPLIT,
         batch_size=int(cfg.TEST.BATCH_SIZE / cfg.NUM_GPUS),
         shuffle=False,
